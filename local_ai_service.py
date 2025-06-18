@@ -24,6 +24,21 @@ class LocalAIService:
             logging.info(f"Ollama not available: {str(e)}")
         return False
     
+    def get_status(self):
+        """Get current AI service status"""
+        if self.available_models:
+            return {
+                'backend': f'Ollama ({self.available_models[0]})',
+                'available': True,
+                'models': self.available_models
+            }
+        else:
+            return {
+                'backend': 'Rule-based Analysis',
+                'available': True,
+                'models': []
+            }
+    
     def analyze_entry(self, entry_text, mode='reflective'):
         """Analyze journal entry using local AI or rule-based analysis"""
         # Try Ollama first if available

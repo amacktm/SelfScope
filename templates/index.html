@@ -13,7 +13,13 @@
                         <i data-feather="edit-3" class="me-2"></i>
                         Today's Journal Entry
                     </h4>
-                    <small class="text-muted">{{ datetime.now().strftime('%B %d, %Y') }}</small>
+                    <div class="d-flex flex-column align-items-end">
+                        <small class="text-muted">{{ datetime.now().strftime('%B %d, %Y') }}</small>
+                        <small class="text-info">
+                            <i data-feather="cpu" class="me-1" style="width: 12px; height: 12px;"></i>
+                            {{ ai_status.backend }}
+                        </small>
+                    </div>
                 </div>
                 <div class="card-body">
                     <form action="{{ url_for('submit_entry') }}" method="POST" id="journalForm">
