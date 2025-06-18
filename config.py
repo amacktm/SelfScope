@@ -11,6 +11,8 @@ class Config:
     # Local AI settings
     OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
     OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama2')  # Default model preference
+    LM_STUDIO_URL = os.environ.get('LM_STUDIO_URL', 'http://localhost:1234/v1')
+    LM_STUDIO_MODEL = os.environ.get('LM_STUDIO_MODEL', 'Hermes-3-Llama-3.2-3B')  # Your Hermes model
     
     # Alternative local AI endpoints
     LOCAL_AI_ENDPOINTS = [
