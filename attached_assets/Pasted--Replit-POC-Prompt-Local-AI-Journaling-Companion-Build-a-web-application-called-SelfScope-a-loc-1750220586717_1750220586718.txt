@@ -1,0 +1,78 @@
+🧪 Replit POC Prompt: Local AI Journaling Companion
+Build a web application called SelfScope – a local-first journaling tool integrated with a simple AI assistant.
+
+The goal of this proof-of-concept is to provide a place for a user to write daily journal entries, and receive intelligent, psychologically informed responses to those entries from an AI agent.
+
+✅ Requirements (for POC):
+🖥️ Frontend:
+Single-page web app (HTML/CSS/JS or use Flask with templating)
+
+A clean, minimal journaling interface:
+
+A textarea for writing today's entry
+
+A submit button
+
+A display area for the AI’s response
+
+A sidebar or section showing the past 3–5 entries (can be static or from a local file)
+
+🧠 AI Agent:
+On submission of a journal entry, call an AI model (OpenAI GPT-4, local via API, or mock with dummy output) to:
+
+Interpret the entry
+
+Respond with reflections using one of these tones: Jungian insight, existential questioning, or thoughtful suggestion
+
+Example response modes:
+
+“This entry reflects themes of self-doubt and transformation, which echo the archetype of The Seeker.”
+
+“What might this fear be protecting you from? Is there a hidden value beneath it?”
+
+“You seem to be facing a choice—what would you do if you trusted yourself fully?”
+
+📁 Storage (simple for now):
+Store journal entries in a JSON or local text file
+
+Use filename as timestamp (YYYY-MM-DD.json) for daily entries
+
+🔐 Authentication (optional in POC):
+Simple login (static credentials or mock auth)
+
+🤖 AI Prompt for Journal Analysis (backend):
+When calling your AI (whether locally or via API), use a structured system prompt like this:
+
+plaintext
+Copy
+Edit
+You are an AI journaling companion trained in Jungian psychology, existential thought, and modern cognitive tools. A user will share a journal entry with you each day.
+
+Your goal is to reflect meaningfully on their entry, offering insight, reframing, or deeper questions—not surface-level responses.
+
+Focus on identifying emotional themes, patterns, or unconscious drivers in their words. Your tone should be curious, compassionate, and thought-provoking.
+
+Always include:
+- A gentle interpretation or insight
+- A meaningful question or quote
+- Optional: a relevant archetype or concept (e.g. "This reflects the Shadow archetype.")
+
+Journal Entry:
+{USER_ENTRY}
+🧰 Tools You Can Use in Replit:
+Flask or FastAPI (Python) for routing + journaling backend
+
+HTML/JS for frontend journaling UI
+
+OpenAI API or mock function returning sample responses
+
+Local JSON file (/journal_entries/2025-06-18.json) for storing entries
+
+Optionally use Replit’s DB for simple key-value storage
+
+🚀 Bonus POC Goals (optional):
+Tagging past entries with emotional themes
+
+Adding a “mode” selector (Jungian / Existential / CBT)
+
+Export to Markdown or sync with Obsidian
