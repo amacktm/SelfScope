@@ -134,7 +134,7 @@
                 <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                     {% if recent_entries %}
                         {% for entry in recent_entries %}
-                        <div class="border-bottom pb-2 mb-2 {% if entry.date == today %}bg-info bg-opacity-10 p-2 rounded{% endif %}">
+                        <div class="border-bottom pb-2 mb-2 {% if entry.date == today %}bg-info bg-opacity-10 p-2 rounded{% endif %} entry-item position-relative">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <h6 class="mb-0">{{ entry.date }} <small class="text-muted">{{ entry.time }}</small></h6>
@@ -142,7 +142,15 @@
                                     <small class="text-primary fw-bold">{{ entry.title }}</small>
                                     {% endif %}
                                 </div>
-                                <small class="text-muted">{{ entry.word_count }} words</small>
+                                <div class="d-flex align-items-center">
+                                    <small class="text-muted me-2">{{ entry.word_count }} words</small>
+                                    <form method="POST" action="{{ url_for('delete_entry', entry_id=entry.id) }}" class="delete-form" style="display: none;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete entry" 
+                                                onclick="return confirm('Are you sure you want to delete this entry?')">
+                                            <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                             <p class="mb-1 text-muted small">
                                 {{ entry.text[:80] }}{% if entry.text|length > 80 %}...{% endif %}
@@ -238,6 +246,20 @@
         
         // Re-initialize feather icons for the new loader icon
         feather.replace();
+    });
+    
+    // Show/hide delete buttons on hover
+    document.querySelectorAll('.entry-item').forEach(item => {
+        const deleteForm = item.querySelector('.delete-form');
+        
+        item.addEventListener('mouseenter', () => {
+            deleteForm.style.display = 'block';
+            feather.replace();
+        });
+        
+        item.addEventListener('mouseleave', () => {
+            deleteForm.style.display = 'none';
+        });
     });
 </script>
 {% endblock %}

@@ -96,6 +96,28 @@ def submit_entry():
         flash('There was an error processing your entry. Please try again.', 'error')
         return redirect(url_for('index'))
 
+@app.route('/delete_entry/<int:entry_id>', methods=['POST'])
+def delete_entry(entry_id):
+    """Delete a journal entry"""
+    try:
+        from models import JournalEntry
+        entry = JournalEntry.query.get_or_404(entry_id)
+        
+        # Store entry info for confirmation message
+        entry_time = entry.datetime_str
+        
+        # Delete the entry
+        db.session.delete(entry)
+        db.session.commit()
+        
+        flash(f'Entry from {entry_time} has been deleted.', 'info')
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        logging.error(f"Error deleting entry {entry_id}: {str(e)}")
+        flash('Error deleting entry. Please try again.', 'error')
+        return redirect(url_for('index'))
+
 @app.route('/dashboard')
 def dashboard():
     """Pattern analysis dashboard"""
