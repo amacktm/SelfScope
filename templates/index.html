@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Journal Entry - SelfScope{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row">
+        <!-- Main Journal Entry Area -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i data-feather="edit-3" class="me-2"></i>
+                        Today's Journal Entry
+                    </h4>
+                    <small class="text-muted">{{ moment().format('MMMM Do, YYYY') }}</small>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('submit_entry') }}" method="POST" id="journalForm">
+                        <!-- Insight Mode Selection -->
+                        <div class="mb-3">
+                            <label class="form-label">Choose your AI companion mode:</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="insight_mode" 
+                                               id="reflective" value="reflective" checked>
+                                        <label class="form-check-label" for="reflective">
+                                            <i data-feather="heart" class="me-1"></i>
+                                            <strong>Reflective Guide</strong>
+                                            <small class="d-block text-muted">Gentle, supportive insights</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="insight_mode" 
+                                               id="psychological" value="psychological">
+                                        <label class="form-check-label" for="psychological">
+                                            <i data-feather="brain" class="me-1"></i>
+                                            <strong>Psychological Insight</strong>
+                                            <small class="d-block text-muted">Jungian & depth psychology</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="insight_mode" 
+                                               id="philosopher" value="philosopher">
+                                        <label class="form-check-label" for="philosopher">
+                                            <i data-feather="compass" class="me-1"></i>
+                                            <strong>Philosopher</strong>
+                                            <small class="d-block text-muted">Existential & meaning-focused</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Journal Entry Textarea -->
+                        <div class="mb-3">
+                            <label for="entry_text" class="form-label">What's on your mind today?</label>
+                            <textarea class="form-control journal-textarea" name="entry_text" id="entry_text" 
+                                      rows="12" placeholder="Start writing your thoughts, feelings, experiences from today...">{% if today_entry %}{{ today_entry.text }}{% endif %}</textarea>
+                            <div class="form-text">
+                                <span id="wordCount">0</span> words
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i data-feather="send" class="me-2"></i>
+                                Analyze & Save Entry
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- AI Response Display -->
+            {% if today_entry and today_entry.ai_response %}
+            <div class="card mt-4" id="aiResponse">
+                <div class="card-header bg-info">
+                    <h5 class="mb-0 text-white">
+                        <i data-feather="lightbulb" class="me-2"></i>
+                        AI Insights - {{ today_entry.ai_response.mode|title }} Mode
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% set response = today_entry.ai_response %}
+                    
+                    {% if response.insight %}
+                    <div class="mb-3">
+                        <h6><i data-feather="eye" class="me-2"></i>Insight</h6>
+                        <p class="text-muted">{{ response.insight }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if response.reflection %}
+                    <div class="mb-3">
+                        <h6><i data-feather="mirror" class="me-2"></i>Reflection</h6>
+                        <p class="text-muted">{{ response.reflection }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if response.question %}
+                    <div class="mb-3">
+                        <h6><i data-feather="help-circle" class="me-2"></i>Question for Reflection</h6>
+                        <p class="text-info fst-italic">"{{ response.question }}"</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if response.archetype %}
+                    <div class="mb-0">
+                        <h6><i data-feather="compass" class="me-2"></i>Archetype/Concept</h6>
+                        <p class="text-muted">{{ response.archetype }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="clock" class="me-2"></i>
+                        Recent Entries
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_entries %}
+                        {% for entry in recent_entries %}
+                        <div class="border-bottom pb-2 mb-2 {% if entry.date == moment().format('YYYY-MM-DD') %}bg-info bg-opacity-10 p-2 rounded{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="mb-1">{{ moment(entry.date).format('MMM Do') }}</h6>
+                                <small class="text-muted">{{ entry.word_count }} words</small>
+                            </div>
+                            <p class="mb-1 text-muted small">
+                                {{ entry.text[:100] }}{% if entry.text|length > 100 %}...{% endif %}
+                            </p>
+                            {% if entry.ai_response %}
+                            <small class="text-info">
+                                <i data-feather="cpu" class="me-1"></i>
+                                AI analyzed
+                            </small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i data-feather="file-text" size="48" class="mb-3"></i>
+                            <p>No entries yet. Start journaling to see your recent entries here!</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm w-100">
+                        <i data-feather="bar-chart-2" class="me-2"></i>
+                        View Pattern Analysis
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Tips -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i data-feather="lightbulb" class="me-2"></i>
+                        Journaling Tips
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2">
+                            <i data-feather="check" class="me-2 text-success"></i>
+                            Write freely without judgment
+                        </li>
+                        <li class="mb-2">
+                            <i data-feather="check" class="me-2 text-success"></i>
+                            Focus on feelings and experiences
+                        </li>
+                        <li class="mb-2">
+                            <i data-feather="check" class="me-2 text-success"></i>
+                            Try different AI modes for varied insights
+                        </li>
+                        <li class="mb-0">
+                            <i data-feather="check" class="me-2 text-success"></i>
+                            Regular journaling reveals patterns
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Word count functionality
+    const textarea = document.getElementById('entry_text');
+    const wordCountSpan = document.getElementById('wordCount');
+    
+    function updateWordCount() {
+        const text = textarea.value.trim();
+        const wordCount = text === '' ? 0 : text.split(/\s+/).length;
+        wordCountSpan.textContent = wordCount;
+    }
+    
+    textarea.addEventListener('input', updateWordCount);
+    
+    // Initialize word count
+    updateWordCount();
+    
+    // Form submission handling
+    document.getElementById('journalForm').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        const entryText = textarea.value.trim();
+        
+        if (entryText === '') {
+            e.preventDefault();
+            alert('Please write something in your journal entry before submitting.');
+            return;
+        }
+        
+        // Show loading state
+        submitBtn.innerHTML = '<i data-feather="loader" class="me-2"></i>Analyzing...';
+        submitBtn.disabled = true;
+        
+        // Re-initialize feather icons for the new loader icon
+        feather.replace();
+    });
+</script>
+{% endblock %}
