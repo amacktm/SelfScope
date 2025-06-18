@@ -13,7 +13,7 @@
                         <i data-feather="edit-3" class="me-2"></i>
                         Today's Journal Entry
                     </h4>
-                    <small class="text-muted">{{ moment().format('MMMM Do, YYYY') }}</small>
+                    <small class="text-muted">{{ datetime.now().strftime('%B %d, %Y') }}</small>
                 </div>
                 <div class="card-body">
                     <form action="{{ url_for('submit_entry') }}" method="POST" id="journalForm">
@@ -37,7 +37,7 @@
                                         <input class="form-check-input" type="radio" name="insight_mode" 
                                                id="psychological" value="psychological">
                                         <label class="form-check-label" for="psychological">
-                                            <i data-feather="brain" class="me-1"></i>
+                                            <i data-feather="user" class="me-1"></i>
                                             <strong>Psychological Insight</strong>
                                             <small class="d-block text-muted">Jungian & depth psychology</small>
                                         </label>
@@ -134,9 +134,9 @@
                 <div class="card-body">
                     {% if recent_entries %}
                         {% for entry in recent_entries %}
-                        <div class="border-bottom pb-2 mb-2 {% if entry.date == moment().format('YYYY-MM-DD') %}bg-info bg-opacity-10 p-2 rounded{% endif %}">
+                        <div class="border-bottom pb-2 mb-2 {% if entry.date == datetime.now().strftime('%Y-%m-%d') %}bg-info bg-opacity-10 p-2 rounded{% endif %}">
                             <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="mb-1">{{ moment(entry.date).format('MMM Do') }}</h6>
+                                <h6 class="mb-1">{{ datetime.strptime(entry.date, '%Y-%m-%d').strftime('%b %d') }}</h6>
                                 <small class="text-muted">{{ entry.word_count }} words</small>
                             </div>
                             <p class="mb-1 text-muted small">

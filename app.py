@@ -3,6 +3,7 @@ import logging
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from datetime import datetime, timedelta
 from ai_service import AIService
+from local_ai_service import LocalAIService
 from journal_service import JournalService
 from pattern_analyzer import PatternAnalyzer
 
@@ -12,8 +13,23 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "your-secret-key-here")
 
+# Make datetime available in templates
+@app.context_processor
+def inject_datetime():
+    return {'datetime': datetime}
+
 # Initialize services
-ai_service = AIService()
+# Check for AI service preference
+use_local_ai = os.environ.get("USE_LOCAL_AI", "true").lower() == "true"
+openai_key = os.environ.get("OPENAI_API_KEY")
+
+if not use_local_ai and openai_key:
+    ai_service = AIService()
+    logging.info("Using OpenAI for AI analysis")
+else:
+    ai_service = LocalAIService()
+    logging.info("Using Local AI for analysis")
+
 journal_service = JournalService()
 pattern_analyzer = PatternAnalyzer()
 
