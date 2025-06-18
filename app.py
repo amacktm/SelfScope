@@ -2,7 +2,7 @@ import os
 import logging
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from datetime import datetime, timedelta
-from local_ai_service import LocalAIService
+from database_ai_service import DatabaseAIService
 from database_journal_service import DatabaseJournalService
 from pattern_analyzer import PatternAnalyzer
 from config import Config
@@ -32,15 +32,18 @@ def inject_context():
 # Import models and create database tables
 from models import JournalEntry, AIConfiguration, AnalyticsData
 
+# Initialize services
+ai_service = None
+journal_service = None
+pattern_analyzer = None
+
 with app.app_context():
     db.create_all()
-
-# Initialize services
-ai_service = LocalAIService()
-logging.info("Using Local AI for analysis")
-
-journal_service = DatabaseJournalService()
-pattern_analyzer = PatternAnalyzer()
+    # Initialize services within app context
+    ai_service = DatabaseAIService()
+    journal_service = DatabaseJournalService()
+    pattern_analyzer = PatternAnalyzer()
+    logging.info("Using Database-backed AI service")
 
 @app.route('/')
 def index():

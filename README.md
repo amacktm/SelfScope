@@ -45,13 +45,15 @@ If no local AI is available, SelfScope uses intelligent rule-based analysis that
 1. Clone the repository
 2. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install flask flask-sqlalchemy gunicorn requests
    ```
 3. Run the application:
    ```bash
    python main.py
    ```
 4. Open http://localhost:5000 in your browser
+
+The application will automatically create a SQLite database (`selfscope.db`) in the project directory on first run.
 
 ## Usage
 
