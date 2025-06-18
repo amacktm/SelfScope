@@ -8,6 +8,10 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-for-production')
     DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
     
+    # Database settings
+    DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///selfscope.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
     # Local AI settings
     OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
     OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama2')  # Default model preference

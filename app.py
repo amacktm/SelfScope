@@ -3,7 +3,7 @@ import logging
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from datetime import datetime, timedelta
 from local_ai_service import LocalAIService
-from journal_service import JournalService
+from database_journal_service import DatabaseJournalService
 from pattern_analyzer import PatternAnalyzer
 from config import Config
 
@@ -13,6 +13,13 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 app.config.from_object(Config)
 app.secret_key = app.config['SECRET_KEY']
+app.config['SQLALCHEMY_DATABASE_URI'] = app.config['DATABASE_URL']
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = app.config['SQLALCHEMY_TRACK_MODIFICATIONS']
+
+# Initialize SQLAlchemy
+from models import db
+
+db.init_app(app)
 
 # Make datetime and AI status available in templates
 @app.context_processor
@@ -22,11 +29,17 @@ def inject_context():
         'ai_status': ai_service.get_status() if 'ai_service' in globals() else {'backend': 'Loading...', 'available': False}
     }
 
+# Import models and create database tables
+from models import JournalEntry, AIConfiguration, AnalyticsData
+
+with app.app_context():
+    db.create_all()
+
 # Initialize services
 ai_service = LocalAIService()
 logging.info("Using Local AI for analysis")
 
-journal_service = JournalService()
+journal_service = DatabaseJournalService()
 pattern_analyzer = PatternAnalyzer()
 
 @app.route('/')
