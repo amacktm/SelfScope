@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}AI Settings - SelfScope{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i data-feather="settings" class="me-2"></i>
+                    AI Configuration
+                </h2>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i data-feather="arrow-left" class="me-2"></i>
+                    Back to Journal
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Current Status -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="activity" class="me-2"></i>
+                        Current Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="status-indicator me-3">
+                            {% if ai_status.available %}
+                                <div class="badge bg-success">Active</div>
+                            {% else %}
+                                <div class="badge bg-warning">Inactive</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <strong>{{ ai_status.backend }}</strong>
+                            {% if ai_status.endpoint %}
+                                <br><small class="text-muted">{{ ai_status.endpoint }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if ai_status.models %}
+                        <div class="mb-3">
+                            <h6>Available Models:</h6>
+                            <ul class="list-unstyled mb-0">
+                                {% for model in ai_status.models[:3] %}
+                                <li class="small text-muted">• {{ model }}</li>
+                                {% endfor %}
+                                {% if ai_status.models|length > 3 %}
+                                <li class="small text-muted">• ... and {{ ai_status.models|length - 3 }} more</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
+                    <button type="button" class="btn btn-outline-primary btn-sm w-100" id="testConnectionBtn">
+                        <i data-feather="wifi" class="me-2"></i>
+                        Test Connection
+                    </button>
+                    
+                    <div id="connectionTest" class="mt-2" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <!-- Quick Setup Guide -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i data-feather="info" class="me-2"></i>
+                        Quick Setup Guide
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="setupAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#lmStudioSetup">
+                                    LM Studio Setup
+                                </button>
+                            </h2>
+                            <div id="lmStudioSetup" class="accordion-collapse collapse" data-bs-parent="#setupAccordion">
+                                <div class="accordion-body small">
+                                    <ol>
+                                        <li>Install LM Studio from <code>lmstudio.ai</code></li>
+                                        <li>Download your model (e.g., Hermes-3-Llama-3.2-3B)</li>
+                                        <li>Start the local server on port 1234</li>
+                                        <li>Select "LM Studio" as endpoint type</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ollamaSetup">
+                                    Ollama Setup
+                                </button>
+                            </h2>
+                            <div id="ollamaSetup" class="accordion-collapse collapse" data-bs-parent="#setupAccordion">
+                                <div class="accordion-body small">
+                                    <ol>
+                                        <li>Install Ollama from <code>ollama.ai</code></li>
+                                        <li>Run: <code>ollama pull llama2</code></li>
+                                        <li>Start: <code>ollama serve</code></li>
+                                        <li>Select "Ollama" as endpoint type</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Form -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="sliders" class="me-2"></i>
+                        AI Service Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('update_ai_settings') }}" method="POST">
+                        <!-- Endpoint Type Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">AI Service Type</label>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="endpoint_type" 
+                                               id="lm_studio" value="lm_studio" 
+                                               {% if current_config.endpoint_type == 'lm_studio' %}checked{% endif %}>
+                                        <label class="form-check-label" for="lm_studio">
+                                            <i data-feather="server" class="me-1"></i>
+                                            <strong>LM Studio</strong>
+                                            <small class="d-block text-muted">Local inference server</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="endpoint_type" 
+                                               id="ollama" value="ollama"
+                                               {% if current_config.endpoint_type == 'ollama' %}checked{% endif %}>
+                                        <label class="form-check-label" for="ollama">
+                                            <i data-feather="terminal" class="me-1"></i>
+                                            <strong>Ollama</strong>
+                                            <small class="d-block text-muted">Local model runner</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="endpoint_type" 
+                                               id="rule_based" value="rule_based"
+                                               {% if current_config.endpoint_type == 'rule_based' %}checked{% endif %}>
+                                        <label class="form-check-label" for="rule_based">
+                                            <i data-feather="cpu" class="me-1"></i>
+                                            <strong>Rule-based</strong>
+                                            <small class="d-block text-muted">No AI required</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LM Studio Configuration -->
+                        <div id="lm_studio_config" class="endpoint-config mb-4" style="display: none;">
+                            <h6>LM Studio Configuration</h6>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="lm_studio_url" class="form-label">Server URL</label>
+                                        <input type="text" class="form-control" id="lm_studio_url" 
+                                               value="{{ current_config.lm_studio_url }}" readonly>
+                                        <div class="form-text">Default LM Studio local server endpoint</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="lm_studio_model" class="form-label">Model Name (Optional)</label>
+                                        <input type="text" class="form-control" name="model_name" id="lm_studio_model" 
+                                               value="{{ current_config.model_name }}"
+                                               placeholder="Auto-detect from server">
+                                        <div class="form-text">Leave blank to auto-select</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ollama Configuration -->
+                        <div id="ollama_config" class="endpoint-config mb-4" style="display: none;">
+                            <h6>Ollama Configuration</h6>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="ollama_url" class="form-label">Server URL</label>
+                                        <input type="text" class="form-control" id="ollama_url" 
+                                               value="{{ current_config.ollama_url }}" readonly>
+                                        <div class="form-text">Default Ollama local server endpoint</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="ollama_model" class="form-label">Model Name (Optional)</label>
+                                        <input type="text" class="form-control" name="model_name" id="ollama_model" 
+                                               value="{{ current_config.model_name }}"
+                                               placeholder="Auto-detect from server">
+                                        <div class="form-text">Leave blank to auto-select</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom API Configuration -->
+                        <div id="openai_compatible_config" class="endpoint-config mb-4" style="display: none;">
+                            <h6>Custom OpenAI-Compatible API</h6>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="custom_url" class="form-label">API Base URL</label>
+                                        <input type="url" class="form-control" name="custom_url" id="custom_url" 
+                                               value="{{ current_config.custom_url }}"
+                                               placeholder="http://localhost:8080/v1">
+                                        <div class="form-text">Base URL for OpenAI-compatible API</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="custom_model" class="form-label">Model Name</label>
+                                        <input type="text" class="form-control" name="model_name" id="custom_model" 
+                                               value="{{ current_config.model_name }}"
+                                               placeholder="gpt-3.5-turbo">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="api_key" class="form-label">API Key (Optional)</label>
+                                <input type="password" class="form-control" name="api_key" id="api_key" 
+                                       value="{{ current_config.api_key }}"
+                                       placeholder="Leave blank if no authentication required">
+                                <div class="form-text">Only required if your API needs authentication</div>
+                            </div>
+                        </div>
+
+                        <!-- Rule-based Configuration -->
+                        <div id="rule_based_config" class="endpoint-config mb-4" style="display: none;">
+                            <div class="alert alert-info">
+                                <i data-feather="info" class="me-2"></i>
+                                <strong>Rule-based Analysis</strong><br>
+                                Uses intelligent keyword matching and pattern recognition to provide insights. 
+                                No external AI service required. Always available as a fallback.
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-outline-secondary me-md-2" onclick="window.location.reload()">
+                                <i data-feather="refresh-cw" class="me-2"></i>
+                                Reset
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i data-feather="save" class="me-2"></i>
+                                Save Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const endpointRadios = document.querySelectorAll('input[name="endpoint_type"]');
+    const configDivs = document.querySelectorAll('.endpoint-config');
+    
+    function showEndpointConfig() {
+        // Hide all config divs
+        configDivs.forEach(div => div.style.display = 'none');
+        
+        // Show selected config
+        const selectedType = document.querySelector('input[name="endpoint_type"]:checked').value;
+        const configDiv = document.getElementById(selectedType + '_config');
+        if (configDiv) {
+            configDiv.style.display = 'block';
+        }
+    }
+    
+    // Set initial state
+    showEndpointConfig();
+    
+    // Add event listeners
+    endpointRadios.forEach(radio => {
+        radio.addEventListener('change', showEndpointConfig);
+    });
+    
+    // Test connection functionality
+    document.getElementById('testConnectionBtn').addEventListener('click', function() {
+        const button = this;
+        const resultDiv = document.getElementById('connectionTest');
+        
+        button.disabled = true;
+        button.innerHTML = '<i data-feather="loader" class="me-2"></i>Testing...';
+        feather.replace();
+        
+        fetch('/test-ai-connection', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            resultDiv.style.display = 'block';
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success alert-sm">
+                        <i data-feather="check-circle" class="me-2"></i>
+                        ${data.message}
+                        ${data.models && data.models.length > 0 ? `<br><small>Models: ${data.models.join(', ')}</small>` : ''}
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger alert-sm">
+                        <i data-feather="x-circle" class="me-2"></i>
+                        ${data.message}
+                    </div>
+                `;
+            }
+            feather.replace();
+        })
+        .catch(error => {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger alert-sm">
+                    <i data-feather="x-circle" class="me-2"></i>
+                    Connection test failed: ${error.message}
+                </div>
+            `;
+            feather.replace();
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.innerHTML = '<i data-feather="wifi" class="me-2"></i>Test Connection';
+            feather.replace();
+        });
+    });
+});
+</script>
+{% endblock %}

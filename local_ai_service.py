@@ -7,49 +7,295 @@ from datetime import datetime
 
 class LocalAIService:
     def __init__(self):
-        self.ollama_url = "http://localhost:11434"
+        self.config = {
+            'endpoint_type': 'ollama',  # ollama, lm_studio, openai_compatible
+            'ollama_url': "http://localhost:11434",
+            'lm_studio_url': "http://localhost:1234/v1",
+            'custom_url': "",
+            'model_name': "",
+            'api_key': ""
+        }
         self.available_models = []
-        self.check_ollama_connection()
+        self.current_endpoint = None
+        self.check_available_services()
+        
+    def check_available_services(self):
+        """Check all available AI services and set the best one"""
+        # Try LM Studio first
+        if self.check_lm_studio_connection():
+            self.config['endpoint_type'] = 'lm_studio'
+            self.current_endpoint = self.config['lm_studio_url']
+            logging.info("Using LM Studio for AI analysis")
+        # Fall back to Ollama
+        elif self.check_ollama_connection():
+            self.config['endpoint_type'] = 'ollama'
+            self.current_endpoint = self.config['ollama_url']
+            logging.info("Using Ollama for AI analysis")
+        else:
+            self.config['endpoint_type'] = 'rule_based'
+            self.current_endpoint = None
+            logging.info("Using rule-based analysis")
+    
+    def check_lm_studio_connection(self):
+        """Check if LM Studio is available and get available models"""
+        try:
+            response = requests.get(f"{self.config['lm_studio_url']}/models", timeout=5)
+            if response.status_code == 200:
+                models_data = response.json()
+                self.available_models = [model['id'] for model in models_data.get('data', [])]
+                if self.available_models:
+                    logging.info(f"LM Studio connected. Available models: {self.available_models}")
+                    return True
+        except Exception as e:
+            logging.debug(f"LM Studio not available: {str(e)}")
+        return False
         
     def check_ollama_connection(self):
         """Check if Ollama is available and get available models"""
         try:
-            response = requests.get(f"{self.ollama_url}/api/tags", timeout=5)
+            response = requests.get(f"{self.config['ollama_url']}/api/tags", timeout=5)
             if response.status_code == 200:
                 models_data = response.json()
                 self.available_models = [model['name'] for model in models_data.get('models', [])]
                 logging.info(f"Ollama connected. Available models: {self.available_models}")
                 return True
         except Exception as e:
-            logging.info(f"Ollama not available: {str(e)}")
+            logging.debug(f"Ollama not available: {str(e)}")
         return False
     
     def get_status(self):
         """Get current AI service status"""
-        if self.available_models:
+        if self.config['endpoint_type'] == 'lm_studio' and self.available_models:
+            return {
+                'backend': f'LM Studio ({self.available_models[0]})',
+                'available': True,
+                'models': self.available_models,
+                'endpoint': self.current_endpoint
+            }
+        elif self.config['endpoint_type'] == 'ollama' and self.available_models:
             return {
                 'backend': f'Ollama ({self.available_models[0]})',
                 'available': True,
-                'models': self.available_models
+                'models': self.available_models,
+                'endpoint': self.current_endpoint
             }
         else:
             return {
                 'backend': 'Rule-based Analysis',
                 'available': True,
+                'models': [],
+                'endpoint': None
+            }
+    
+    def get_available_endpoints(self):
+        """Get list of available AI endpoints"""
+        endpoints = [
+            {
+                'type': 'lm_studio',
+                'name': 'LM Studio',
+                'url': self.config['lm_studio_url'],
+                'available': self.config['endpoint_type'] == 'lm_studio'
+            },
+            {
+                'type': 'ollama',
+                'name': 'Ollama',
+                'url': self.config['ollama_url'],
+                'available': self.config['endpoint_type'] == 'ollama'
+            },
+            {
+                'type': 'rule_based',
+                'name': 'Rule-based Analysis',
+                'url': 'Local',
+                'available': True
+            }
+        ]
+        return endpoints
+    
+    def get_configuration(self):
+        """Get current configuration"""
+        return self.config.copy()
+    
+    def update_configuration(self, new_config):
+        """Update AI service configuration"""
+        try:
+            # Update configuration
+            for key, value in new_config.items():
+                if key in self.config:
+                    self.config[key] = value
+            
+            # Reset and recheck services
+            self.available_models = []
+            self.current_endpoint = None
+            
+            if new_config.get('endpoint_type') == 'lm_studio':
+                success = self.check_lm_studio_connection()
+                if success:
+                    self.config['endpoint_type'] = 'lm_studio'
+                    self.current_endpoint = self.config['lm_studio_url']
+            elif new_config.get('endpoint_type') == 'ollama':
+                success = self.check_ollama_connection()
+                if success:
+                    self.config['endpoint_type'] = 'ollama'
+                    self.current_endpoint = self.config['ollama_url']
+            elif new_config.get('endpoint_type') == 'openai_compatible':
+                success = self.check_openai_compatible_connection(new_config.get('custom_url', ''))
+                if success:
+                    self.config['endpoint_type'] = 'openai_compatible'
+                    self.current_endpoint = new_config.get('custom_url', '')
+            else:
+                # Fall back to rule-based
+                self.config['endpoint_type'] = 'rule_based'
+                success = True
+            
+            return success
+            
+        except Exception as e:
+            logging.error(f"Error updating configuration: {str(e)}")
+            return False
+    
+    def check_openai_compatible_connection(self, url):
+        """Check OpenAI-compatible API connection"""
+        try:
+            if not url:
+                return False
+            response = requests.get(f"{url}/models", timeout=5)
+            if response.status_code == 200:
+                models_data = response.json()
+                self.available_models = [model['id'] for model in models_data.get('data', [])]
+                logging.info(f"OpenAI-compatible API connected. Available models: {self.available_models}")
+                return True
+        except Exception as e:
+            logging.debug(f"OpenAI-compatible API not available: {str(e)}")
+        return False
+    
+    def test_connection(self):
+        """Test current AI connection"""
+        try:
+            if self.config['endpoint_type'] == 'lm_studio':
+                success = self.check_lm_studio_connection()
+                return {
+                    'success': success,
+                    'message': f"LM Studio {'connected' if success else 'not available'}",
+                    'models': self.available_models if success else []
+                }
+            elif self.config['endpoint_type'] == 'ollama':
+                success = self.check_ollama_connection()
+                return {
+                    'success': success,
+                    'message': f"Ollama {'connected' if success else 'not available'}",
+                    'models': self.available_models if success else []
+                }
+            elif self.config['endpoint_type'] == 'openai_compatible':
+                success = self.check_openai_compatible_connection(self.config['custom_url'])
+                return {
+                    'success': success,
+                    'message': f"Custom API {'connected' if success else 'not available'}",
+                    'models': self.available_models if success else []
+                }
+            else:
+                return {
+                    'success': True,
+                    'message': "Rule-based analysis is always available",
+                    'models': []
+                }
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f"Connection test failed: {str(e)}",
                 'models': []
             }
     
     def analyze_entry(self, entry_text, mode='reflective'):
         """Analyze journal entry using local AI or rule-based analysis"""
-        # Try Ollama first if available
+        # Try current AI service if available
         if self.available_models:
             try:
-                return self._analyze_with_ollama(entry_text, mode)
+                if self.config['endpoint_type'] == 'lm_studio':
+                    return self._analyze_with_lm_studio(entry_text, mode)
+                elif self.config['endpoint_type'] == 'ollama':
+                    return self._analyze_with_ollama(entry_text, mode)
+                elif self.config['endpoint_type'] == 'openai_compatible':
+                    return self._analyze_with_openai_compatible(entry_text, mode)
             except Exception as e:
-                logging.warning(f"Ollama analysis failed: {str(e)}")
+                logging.warning(f"AI analysis failed: {str(e)}")
         
         # Fallback to rule-based analysis
         return self._analyze_with_rules(entry_text, mode)
+    
+    def _analyze_with_lm_studio(self, entry_text, mode):
+        """Use LM Studio for AI analysis"""
+        if not self.available_models:
+            raise Exception("No models available")
+            
+        model = self.config.get('model_name') or self.available_models[0]
+        system_prompt = self._get_system_prompt(mode)
+        
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Journal Entry:\n{entry_text}"}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 800,
+            "stream": False
+        }
+        
+        response = requests.post(f"{self.config['lm_studio_url']}/chat/completions", 
+                               json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            content = result.get('choices', [{}])[0].get('message', {}).get('content', '{}')
+            
+            try:
+                parsed_result = json.loads(content)
+                parsed_result['mode'] = mode
+                return parsed_result
+            except json.JSONDecodeError:
+                # If JSON parsing fails, create structured response from text
+                return self._parse_unstructured_response(content, mode)
+        
+        raise Exception(f"LM Studio request failed: {response.status_code}")
+    
+    def _analyze_with_openai_compatible(self, entry_text, mode):
+        """Use OpenAI-compatible API for analysis"""
+        if not self.available_models:
+            raise Exception("No models available")
+            
+        model = self.config.get('model_name') or self.available_models[0]
+        system_prompt = self._get_system_prompt(mode)
+        
+        headers = {}
+        if self.config.get('api_key'):
+            headers['Authorization'] = f"Bearer {self.config['api_key']}"
+        
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Journal Entry:\n{entry_text}"}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 800,
+            "stream": False
+        }
+        
+        response = requests.post(f"{self.config['custom_url']}/chat/completions", 
+                               json=payload, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            content = result.get('choices', [{}])[0].get('message', {}).get('content', '{}')
+            
+            try:
+                parsed_result = json.loads(content)
+                parsed_result['mode'] = mode
+                return parsed_result
+            except json.JSONDecodeError:
+                return self._parse_unstructured_response(content, mode)
+        
+        raise Exception(f"API request failed: {response.status_code}")
     
     def _analyze_with_ollama(self, entry_text, mode):
         """Use Ollama for AI analysis"""
@@ -67,7 +313,7 @@ class LocalAIService:
             "format": "json"
         }
         
-        response = requests.post(f"{self.ollama_url}/api/chat", json=payload, timeout=30)
+        response = requests.post(f"{self.config['ollama_url']}/api/chat", json=payload, timeout=30)
         
         if response.status_code == 200:
             result = response.json()

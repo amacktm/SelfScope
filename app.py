@@ -115,6 +115,64 @@ def view_entry(date):
         flash('There was an error loading the entry.', 'error')
         return redirect(url_for('index'))
 
+@app.route('/ai-settings')
+def ai_settings():
+    """AI configuration settings page"""
+    try:
+        ai_status = ai_service.get_status()
+        available_endpoints = ai_service.get_available_endpoints()
+        current_config = ai_service.get_configuration()
+        
+        return render_template('ai_settings.html',
+                             ai_status=ai_status,
+                             available_endpoints=available_endpoints,
+                             current_config=current_config)
+        
+    except Exception as e:
+        logging.error(f"Error loading AI settings: {str(e)}")
+        flash('There was an error loading AI settings.', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/ai-settings', methods=['POST'])
+def update_ai_settings():
+    """Update AI configuration"""
+    try:
+        endpoint_type = request.form.get('endpoint_type', 'ollama')
+        custom_url = request.form.get('custom_url', '').strip()
+        model_name = request.form.get('model_name', '').strip()
+        api_key = request.form.get('api_key', '').strip()
+        
+        # Update AI service configuration
+        success = ai_service.update_configuration({
+            'endpoint_type': endpoint_type,
+            'custom_url': custom_url,
+            'model_name': model_name,
+            'api_key': api_key
+        })
+        
+        if success:
+            flash('AI settings updated successfully!', 'success')
+        else:
+            flash('Failed to update AI settings. Please check your configuration.', 'error')
+            
+        return redirect(url_for('ai_settings'))
+        
+    except Exception as e:
+        logging.error(f"Error updating AI settings: {str(e)}")
+        flash('There was an error updating AI settings.', 'error')
+        return redirect(url_for('ai_settings'))
+
+@app.route('/test-ai-connection', methods=['POST'])
+def test_ai_connection():
+    """Test AI connection endpoint"""
+    try:
+        test_result = ai_service.test_connection()
+        return jsonify(test_result)
+        
+    except Exception as e:
+        logging.error(f"Error testing AI connection: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.errorhandler(404)
 def not_found(error):
     return render_template('404.html'), 404
