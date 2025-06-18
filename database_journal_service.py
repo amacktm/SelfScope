@@ -10,48 +10,39 @@ class DatabaseJournalService:
     def __init__(self):
         pass
     
-    def save_entry(self, date_str, entry_text):
-        """Save a journal entry for a specific date"""
+    def save_entry(self, entry_text, title=None, timestamp=None):
+        """Save a new journal entry with timestamp"""
         try:
-            entry_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            if timestamp is None:
+                timestamp = datetime.utcnow()
+            elif isinstance(timestamp, str):
+                timestamp = datetime.fromisoformat(timestamp)
+                
             word_count = len(entry_text.split())
             
-            # Check if entry already exists
-            existing_entry = JournalEntry.query.filter_by(date=entry_date).first()
+            # Create new entry (always create new, never update)
+            new_entry = JournalEntry(
+                timestamp=timestamp,
+                text=entry_text,
+                word_count=word_count,
+                title=title
+            )
+            db.session.add(new_entry)
+            db.session.commit()
             
-            if existing_entry:
-                # Update existing entry
-                existing_entry.text = entry_text
-                existing_entry.word_count = word_count
-                existing_entry.updated_at = datetime.utcnow()
-                db.session.commit()
-                
-                entry_data = {
-                    'date': date_str,
-                    'text': entry_text,
-                    'word_count': word_count,
-                    'created_at': existing_entry.created_at.isoformat(),
-                    'updated_at': existing_entry.updated_at.isoformat()
-                }
-            else:
-                # Create new entry
-                new_entry = JournalEntry(
-                    date=entry_date,
-                    text=entry_text,
-                    word_count=word_count
-                )
-                db.session.add(new_entry)
-                db.session.commit()
-                
-                entry_data = {
-                    'date': date_str,
-                    'text': entry_text,
-                    'word_count': word_count,
-                    'created_at': new_entry.created_at.isoformat(),
-                    'updated_at': new_entry.updated_at.isoformat()
-                }
+            entry_data = {
+                'id': new_entry.id,
+                'timestamp': new_entry.timestamp.isoformat(),
+                'date': new_entry.date_str,
+                'time': new_entry.time_str,
+                'text': entry_text,
+                'word_count': word_count,
+                'title': title,
+                'created_at': new_entry.created_at.isoformat(),
+                'updated_at': new_entry.updated_at.isoformat()
+            }
             
-            logging.info(f"Saved journal entry for {date_str}")
+            logging.info(f"Saved journal entry at {new_entry.datetime_str}")
             return entry_data
             
         except Exception as e:
@@ -59,11 +50,10 @@ class DatabaseJournalService:
             db.session.rollback()
             raise
     
-    def update_entry(self, date_str, entry_data):
-        """Update an existing journal entry"""
+    def update_entry(self, entry_id, entry_data):
+        """Update an existing journal entry by ID"""
         try:
-            entry_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            entry = JournalEntry.query.filter_by(date=entry_date).first()
+            entry = JournalEntry.query.get(entry_id)
             
             if entry:
                 # Update fields from entry_data
@@ -77,51 +67,66 @@ class DatabaseJournalService:
                 if 'insight_mode' in entry_data:
                     entry.insight_mode = entry_data['insight_mode']
                 
+                if 'title' in entry_data:
+                    entry.title = entry_data['title']
+                
                 entry.updated_at = datetime.utcnow()
                 db.session.commit()
                 
-                logging.info(f"Updated journal entry for {date_str}")
+                logging.info(f"Updated journal entry {entry_id}")
             else:
-                logging.warning(f"No entry found for {date_str} to update")
+                logging.warning(f"No entry found with ID {entry_id} to update")
                 
         except Exception as e:
             logging.error(f"Error updating entry: {str(e)}")
             db.session.rollback()
             raise
     
-    def get_entry_by_date(self, date_str):
-        """Get a journal entry by date"""
+    def get_entries_by_date(self, date_str):
+        """Get all journal entries for a specific date"""
         try:
-            entry_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            entry = JournalEntry.query.filter_by(date=entry_date).first()
-            
-            if entry:
-                return {
-                    'date': entry.date.strftime('%Y-%m-%d'),
-                    'text': entry.text,
-                    'word_count': entry.word_count,
-                    'ai_response': entry.ai_response_dict,
-                    'insight_mode': entry.insight_mode,
-                    'created_at': entry.created_at.isoformat(),
-                    'updated_at': entry.updated_at.isoformat()
-                }
-            return None
-                
-        except Exception as e:
-            logging.error(f"Error reading entry for {date_str}: {str(e)}")
-            return None
-    
-    def get_recent_entries(self, count=5):
-        """Get the most recent journal entries"""
-        try:
-            entries = JournalEntry.query.order_by(JournalEntry.date.desc()).limit(count).all()
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            entries = JournalEntry.query.filter(
+                db.func.date(JournalEntry.timestamp) == target_date
+            ).order_by(JournalEntry.timestamp.desc()).all()
             
             result = []
             for entry in entries:
                 result.append({
-                    'date': entry.date.strftime('%Y-%m-%d'),
+                    'id': entry.id,
+                    'timestamp': entry.timestamp.isoformat(),
+                    'date': entry.date_str,
+                    'time': entry.time_str,
                     'text': entry.text,
                     'word_count': entry.word_count,
+                    'title': entry.title,
+                    'ai_response': entry.ai_response_dict,
+                    'insight_mode': entry.insight_mode,
+                    'created_at': entry.created_at.isoformat(),
+                    'updated_at': entry.updated_at.isoformat()
+                })
+            
+            return result
+                
+        except Exception as e:
+            logging.error(f"Error reading entries for {date_str}: {str(e)}")
+            return []
+    
+    def get_recent_entries(self, count=10):
+        """Get the most recent journal entries"""
+        try:
+            entries = JournalEntry.query.order_by(JournalEntry.timestamp.desc()).limit(count).all()
+            
+            result = []
+            for entry in entries:
+                result.append({
+                    'id': entry.id,
+                    'timestamp': entry.timestamp.isoformat(),
+                    'date': entry.date_str,
+                    'time': entry.time_str,
+                    'text': entry.text,
+                    'word_count': entry.word_count,
+                    'title': entry.title,
                     'ai_response': entry.ai_response_dict,
                     'insight_mode': entry.insight_mode,
                     'created_at': entry.created_at.isoformat()

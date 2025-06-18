@@ -12,16 +12,32 @@ class JournalEntry(db.Model):
     __tablename__ = 'journal_entries'
     
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False, unique=True, index=True)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     text = db.Column(db.Text, nullable=False)
     word_count = db.Column(db.Integer, default=0)
     ai_response = db.Column(db.Text)  # JSON string
     insight_mode = db.Column(db.String(50), default='reflective')
+    title = db.Column(db.String(200))  # Optional title for the entry
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def __repr__(self):
-        return f'<JournalEntry {self.date}>'
+        return f'<JournalEntry {self.timestamp}>'
+    
+    @property
+    def date_str(self):
+        """Get date as string"""
+        return self.timestamp.strftime('%Y-%m-%d')
+    
+    @property
+    def time_str(self):
+        """Get time as string"""
+        return self.timestamp.strftime('%H:%M')
+    
+    @property
+    def datetime_str(self):
+        """Get datetime as formatted string"""
+        return self.timestamp.strftime('%Y-%m-%d %H:%M')
     
     @property
     def ai_response_dict(self):

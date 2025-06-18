@@ -48,15 +48,18 @@ with app.app_context():
 @app.route('/')
 def index():
     """Main journaling interface"""
-    # Get recent entries for sidebar
-    recent_entries = journal_service.get_recent_entries(5)
+    today = datetime.now().strftime('%Y-%m-%d')
     
-    # Get today's entry if it exists
-    today_entry = journal_service.get_entry_by_date(datetime.now().strftime('%Y-%m-%d'))
+    # Get today's entries if they exist
+    today_entries = journal_service.get_entries_by_date(today)
+    
+    # Get recent entries for sidebar
+    recent_entries = journal_service.get_recent_entries(10)
     
     return render_template('index.html', 
-                         recent_entries=recent_entries,
-                         today_entry=today_entry)
+                         today=today,
+                         today_entries=today_entries,
+                         recent_entries=recent_entries)
 
 @app.route('/submit_entry', methods=['POST'])
 def submit_entry():
