@@ -76,17 +76,19 @@ def submit_entry():
         entry_title = request.form.get('entry_title', '').strip()
         entry_data = journal_service.save_entry(entry_text, title=entry_title)
         
-        # Get AI response
-        ai_response = ai_service.analyze_entry(entry_text, insight_mode)
-        
-        # Update entry with AI response
-        update_data = {
-            'ai_response': ai_response,
-            'insight_mode': insight_mode
-        }
-        journal_service.update_entry(entry_data['id'], update_data)
-        
-        flash('Your journal entry has been saved and analyzed!', 'success')
+        # Only get AI response if not in "none" mode
+        if insight_mode != 'none':
+            ai_response = ai_service.analyze_entry(entry_text, insight_mode)
+            
+            # Update entry with AI response
+            update_data = {
+                'ai_response': ai_response,
+                'insight_mode': insight_mode
+            }
+            journal_service.update_entry(entry_data['id'], update_data)
+            flash('Your journal entry has been saved and analyzed!', 'success')
+        else:
+            flash('Your journal entry has been saved!', 'success')
         return redirect(url_for('index'))
         
     except Exception as e:

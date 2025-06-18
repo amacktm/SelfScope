@@ -45,7 +45,12 @@
                         <div class="mb-3">
                             <label class="form-label">AI Response Style:</label>
                             <div class="btn-group w-100" role="group" aria-label="Insight mode">
-                                <input type="radio" class="btn-check" name="insight_mode" id="reflective" value="reflective" checked>
+                                <input type="radio" class="btn-check" name="insight_mode" id="none" value="none" checked>
+                                <label class="btn btn-outline-secondary" for="none">
+                                    <i data-feather="save" class="me-1"></i>Quick Save
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="insight_mode" id="reflective" value="reflective">
                                 <label class="btn btn-outline-secondary" for="reflective">
                                     <i data-feather="heart" class="me-1"></i>Supportive
                                 </label>
@@ -126,7 +131,7 @@
                         Recent Entries
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                     {% if recent_entries %}
                         {% for entry in recent_entries %}
                         <div class="border-bottom pb-2 mb-2 {% if entry.date == today %}bg-info bg-opacity-10 p-2 rounded{% endif %}">
