@@ -11,10 +11,11 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">
                         <i data-feather="edit-3" class="me-2"></i>
-                        Today's Journal Entry
+                        Quick Journal Entry
                     </h4>
                     <div class="d-flex flex-column align-items-end">
                         <small class="text-muted">{{ datetime.now().strftime('%B %d, %Y') }}</small>
+                        <small class="text-muted">{{ datetime.now().strftime('%H:%M') }}</small>
                         <small class="text-info">
                             <i data-feather="cpu" class="me-1" style="width: 12px; height: 12px;"></i>
                             {{ ai_status.backend }}
@@ -23,61 +24,49 @@
                 </div>
                 <div class="card-body">
                     <form action="{{ url_for('submit_entry') }}" method="POST" id="journalForm">
-                        <!-- Insight Mode Selection -->
+                        <!-- Optional Title -->
                         <div class="mb-3">
-                            <label class="form-label">Choose your AI companion mode:</label>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="insight_mode" 
-                                               id="reflective" value="reflective" checked>
-                                        <label class="form-check-label" for="reflective">
-                                            <i data-feather="heart" class="me-1"></i>
-                                            <strong>Reflective Guide</strong>
-                                            <small class="d-block text-muted">Gentle, supportive insights</small>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="insight_mode" 
-                                               id="psychological" value="psychological">
-                                        <label class="form-check-label" for="psychological">
-                                            <i data-feather="user" class="me-1"></i>
-                                            <strong>Psychological Insight</strong>
-                                            <small class="d-block text-muted">Jungian & depth psychology</small>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="insight_mode" 
-                                               id="philosopher" value="philosopher">
-                                        <label class="form-check-label" for="philosopher">
-                                            <i data-feather="compass" class="me-1"></i>
-                                            <strong>Philosopher</strong>
-                                            <small class="d-block text-muted">Existential & meaning-focused</small>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
+                            <label for="entry_title" class="form-label">Entry Title (optional)</label>
+                            <input type="text" class="form-control" name="entry_title" id="entry_title" 
+                                   placeholder="Quick note, Morning thoughts, After meeting...">
                         </div>
 
                         <!-- Journal Entry Textarea -->
                         <div class="mb-3">
-                            <label for="entry_text" class="form-label">What's on your mind today?</label>
+                            <label for="entry_text" class="form-label">What's happening right now?</label>
                             <textarea class="form-control journal-textarea" name="entry_text" id="entry_text" 
-                                      rows="12" placeholder="Start writing your thoughts, feelings, experiences from today...">{% if today_entry %}{{ today_entry.text }}{% endif %}</textarea>
+                                      rows="8" placeholder="Capture your thoughts, feelings, or experiences in this moment..."></textarea>
                             <div class="form-text">
                                 <span id="wordCount">0</span> words
                             </div>
                         </div>
 
+                        <!-- Insight Mode Selection (Compact) -->
+                        <div class="mb-3">
+                            <label class="form-label">AI Response Style:</label>
+                            <div class="btn-group w-100" role="group" aria-label="Insight mode">
+                                <input type="radio" class="btn-check" name="insight_mode" id="reflective" value="reflective" checked>
+                                <label class="btn btn-outline-secondary" for="reflective">
+                                    <i data-feather="heart" class="me-1"></i>Supportive
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="insight_mode" id="psychological" value="psychological">
+                                <label class="btn btn-outline-secondary" for="psychological">
+                                    <i data-feather="user" class="me-1"></i>Psychological
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="insight_mode" id="philosopher" value="philosopher">
+                                <label class="btn btn-outline-secondary" for="philosopher">
+                                    <i data-feather="compass" class="me-1"></i>Philosophical
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Submit Button -->
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
                                 <i data-feather="send" class="me-2"></i>
-                                Analyze & Save Entry
+                                Save & Analyze
                             </button>
                         </div>
                     </form>
@@ -140,13 +129,18 @@
                 <div class="card-body">
                     {% if recent_entries %}
                         {% for entry in recent_entries %}
-                        <div class="border-bottom pb-2 mb-2 {% if entry.date == datetime.now().strftime('%Y-%m-%d') %}bg-info bg-opacity-10 p-2 rounded{% endif %}">
+                        <div class="border-bottom pb-2 mb-2 {% if entry.date == today %}bg-info bg-opacity-10 p-2 rounded{% endif %}">
                             <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="mb-1">{{ datetime.strptime(entry.date, '%Y-%m-%d').strftime('%b %d') }}</h6>
+                                <div>
+                                    <h6 class="mb-0">{{ entry.date }} <small class="text-muted">{{ entry.time }}</small></h6>
+                                    {% if entry.title %}
+                                    <small class="text-primary fw-bold">{{ entry.title }}</small>
+                                    {% endif %}
+                                </div>
                                 <small class="text-muted">{{ entry.word_count }} words</small>
                             </div>
                             <p class="mb-1 text-muted small">
-                                {{ entry.text[:100] }}{% if entry.text|length > 100 %}...{% endif %}
+                                {{ entry.text[:80] }}{% if entry.text|length > 80 %}...{% endif %}
                             </p>
                             {% if entry.ai_response %}
                             <small class="text-info">

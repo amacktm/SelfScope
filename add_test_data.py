@@ -9,15 +9,48 @@ from flask import Flask
 from app import app, journal_service, ai_service
 
 test_entries = [
+    # Multiple entries for today showing ADHD-friendly quick capture
     {
-        "date": "2025-06-17",
-        "text": """Today was one of those days where everything felt like an uphill battle. Started the morning rushing to catch the bus, only to realize I'd forgotten my laptop charger at home. The presentation at work went okay, but I could feel my anxiety creeping in when the client asked those tough questions about the budget projections.
-
-I've been thinking a lot about my career lately. Sometimes I wonder if I'm on the right path or just going through the motions. There's this part of me that wants to take bigger risks, maybe start that side project I've been talking about for months. But then the practical voice kicks in - bills, responsibilities, the comfort of a steady paycheck.
-
-Had lunch with Sarah today. She always has this way of putting things in perspective. We talked about how change is scary but staying stuck is scarier. She reminded me of when I was terrified to move to this city three years ago, and now I can't imagine being anywhere else.
-
-Tonight I'm going to work on that business plan I started. Even if it's just for 30 minutes. Small steps count, right?"""
+        "timestamp": "2025-06-18T08:15:00",
+        "title": "Morning coffee thoughts",
+        "text": "Woke up feeling scattered but hopeful. Coffee is helping. Had that dream about the presentation again - need to prep better. Why do I always wait until the last minute? Setting a timer for 25 minutes to work on it right after this."
+    },
+    {
+        "timestamp": "2025-06-18T11:30:00", 
+        "title": "After the meeting",
+        "text": "That went better than expected! Sarah's feedback was actually really helpful. I tend to overthink these things. Note to self: trust the process more. Now I'm feeling energized to tackle the rest of the day."
+    },
+    {
+        "timestamp": "2025-06-18T15:45:00",
+        "title": "",
+        "text": "Afternoon crash hit hard. Brain feels like mush. Hyperfocus session this morning was great but now I'm paying for it. Going to take a proper break instead of pushing through. Sometimes rest IS productivity."
+    },
+    {
+        "timestamp": "2025-06-18T19:20:00",
+        "title": "Evening reflection",
+        "text": "Made it through another day! Actually proud of how I handled the energy dips today. Used to fight them, now I'm learning to work with my natural rhythms. Small wins matter."
+    },
+    
+    # Yesterday's entries
+    {
+        "timestamp": "2025-06-17T07:45:00",
+        "title": "Early bird thoughts", 
+        "text": "Up early for once! Brain feels clear. This is when I do my best thinking. Why can't I be a morning person more consistently? Going to ride this wave while it lasts."
+    },
+    {
+        "timestamp": "2025-06-17T12:15:00",
+        "title": "Lunch break chaos",
+        "text": "Forgot to eat again until now. ADHD brain strikes again. At least I remembered before 3pm this time. Setting more food alarms on my phone. Basic human needs shouldn't be this hard to remember."
+    },
+    {
+        "timestamp": "2025-06-17T16:30:00",
+        "title": "Hyperfocus aftermath",
+        "text": "Just emerged from a 4-hour deep dive into that project. Didn't even notice the time passing. This is both my superpower and my weakness. Made incredible progress but now I'm exhausted and forgot about everything else."
+    },
+    {
+        "timestamp": "2025-06-17T21:00:00",
+        "title": "",
+        "text": "Ended up having a great conversation with Mom tonight. She reminded me that my 'scattered' brain has led to some of my most creative solutions. Reframing challenges as strengths."
     },
     {
         "date": "2025-06-16", 
@@ -82,44 +115,45 @@ Change is slow, but I'm starting to believe it's possible. Some days I feel like
 def add_test_data():
     """Add test journal entries with AI analysis"""
     with app.app_context():
-        print("Adding test journal entries...")
+        print("Adding ADHD-friendly test journal entries...")
         
         for entry_data in test_entries:
             try:
-                # Save the journal entry
-                saved_entry = journal_service.save_entry(entry_data["date"], entry_data["text"])
-                print(f"✓ Added entry for {entry_data['date']}")
+                # Parse timestamp if provided, otherwise use date
+                if "timestamp" in entry_data:
+                    timestamp = datetime.fromisoformat(entry_data["timestamp"])
+                    title = entry_data.get("title", "")
+                    text = entry_data["text"]
+                    
+                    # Save the journal entry with timestamp
+                    saved_entry = journal_service.save_entry(text, title=title, timestamp=timestamp)
+                    print(f"✓ Added entry for {timestamp.strftime('%Y-%m-%d %H:%M')}")
+                    
+                else:
+                    # Legacy format - convert to timestamp
+                    date_str = entry_data["date"]
+                    timestamp = datetime.strptime(date_str + "T12:00:00", "%Y-%m-%dT%H:%M:%S")
+                    text = entry_data["text"]
+                    
+                    saved_entry = journal_service.save_entry(text, timestamp=timestamp)
+                    print(f"✓ Added entry for {date_str}")
                 
                 # Generate AI analysis for the entry
-                ai_response = ai_service.analyze_entry(entry_data["text"], mode='reflective')
+                ai_response = ai_service.analyze_entry(text, mode='reflective')
                 
                 # Update the entry with AI response
                 update_data = {
                     "ai_response": ai_response
                 }
-                journal_service.update_entry(entry_data["date"], update_data)
-                print(f"✓ Added AI analysis for {entry_data['date']}")
-                
-                # Store analytics data
-                if ai_response and 'emotions' in ai_response:
-                    emotion_data = ai_response.get('emotions', {})
-                    theme_data = ai_response.get('themes', {})
-                    sentiment_score = ai_response.get('sentiment_score', 0.5)
-                    
-                    journal_service.store_analytics_data(
-                        entry_data["date"], 
-                        emotion_data, 
-                        theme_data, 
-                        sentiment_score
-                    )
-                    print(f"✓ Added analytics data for {entry_data['date']}")
+                journal_service.update_entry(saved_entry['id'], update_data)
+                print(f"✓ Added AI analysis")
                 
             except Exception as e:
-                print(f"✗ Error adding entry for {entry_data['date']}: {str(e)}")
+                print(f"✗ Error adding entry: {str(e)}")
         
         print(f"\nTest data setup complete! You now have {len(test_entries)} sample journal entries.")
-        print("Visit http://localhost:5000 to see the journaling interface.")
-        print("Visit http://localhost:5000/dashboard to see pattern analysis.")
+        print("The entries show multiple timestamped entries per day - perfect for ADHD journaling!")
+        print("Visit http://localhost:5000 to see the new multi-entry interface.")
 
 if __name__ == "__main__":
     add_test_data()
